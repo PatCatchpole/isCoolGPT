@@ -10,8 +10,8 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   ECR_REPOSITORY: iscool-gpt
-  ECS_CLUSTER: iscool-gpt-cluster
-  ECS_SERVICE: iscool-gpt-service
+  ECS_CLUSTER: iscoogpt-cluster
+  ECS_SERVICE: iscool-gpt-task-service
   IMAGE_TAG: latest
 
 jobs:
