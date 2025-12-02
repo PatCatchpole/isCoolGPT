@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+openai>=1.0.0
+pytest
+httpx
+pydantic
+fastapi
+uvicorn[standard]
+google-generativeai
+fastapi-pagination

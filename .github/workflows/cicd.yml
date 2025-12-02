@@ -1,0 +1,81 @@
+name: CI/CD - IsCoolGPT
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_REPOSITORY: iscool-gpt
+  ECS_CLUSTER: iscool-gpt-cluster
+  ECS_SERVICE: iscool-gpt-service
+  IMAGE_TAG: latest
+
+jobs:
+  ci:
+    name: Testes e validação
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências
+        run: |
+          pip install --no-cache-dir -r requirements.txt
+          # Se tiver testes:
+          # pip install pytest
+
+      # Descomente se tiver testes
+      # - name: Rodar testes
+      #   run: pytest
+
+  cd:
+    name: Build e Deploy ECS
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login no Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build e push da imagem Docker
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          IMAGE_URI=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+
+          echo "Construindo imagem ${IMAGE_URI}"
+          docker build -t ${IMAGE_URI} .
+
+          echo "Fazendo push da imagem..."
+          docker push ${IMAGE_URI}
+
+      - name: Deploy no Amazon ECS (force new deployment)
+        run: |
+          aws ecs update-service \
+            --cluster ${ECS_CLUSTER} \
+            --service ${ECS_SERVICE} \
+            --force-new-deployment
+
+          echo "Deploy acionado com sucesso."
